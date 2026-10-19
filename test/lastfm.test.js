@@ -41,7 +41,7 @@ test('invalid inputs and missing default are rejected before upstream requests',
   let calls = 0;
   const never = () => { calls++; throw new Error('must not fetch'); };
   for (const input of [{ period: 'month' }, { artistLimit: 51 }, { trackLimit: 101 }, { artistLimit: 0 },
-    { trackLimit: 1.5 }, { username: 'user&api_key=bad' }]) {
+    { trackLimit: 1.5 }, { username: '   ' }, { username: 'x'.repeat(101) }]) {
     await assert.rejects(getListeningProfile(input, never, env));
   }
   await assert.rejects(getListeningProfile({}, never), { code: 'not_configured' });
@@ -100,4 +100,27 @@ test('timeout covers fetch and body consumption; a failed chart fails the whole 
     if (method === 'user.getTopTracks') throw new Error('chart failed');
     return request(method, params);
   }, env), /chart failed/);
+});
+
+test('legacy usernames and query delimiters remain a single safely encoded parameter', async () => {
+  for (const user of ['legacy.name', 'legacy name', 'name&api_key=bad#fragment']) {
+    for (const useDefault of [false, true]) {
+      let calls = 0;
+      const config = { ...env, LASTFM_DEFAULT_USER: user };
+      const client = createLastfmClient(config, { fetcher: async url => {
+        calls++;
+        assert.equal(url.origin, 'https://ws.audioscrobbler.com');
+        assert.equal(url.pathname, '/2.0/');
+        assert.equal(url.hash, '');
+        assert.equal(url.searchParams.get('user'), user);
+        assert.deepEqual(url.searchParams.getAll('api_key'), [env.LASTFM_API_KEY]);
+        const kind = url.searchParams.get('method') === 'user.getTopArtists' ? 'artist' : 'track';
+        return Response.json(chartFixture(kind, { user, limit: Number(url.searchParams.get('limit')) }));
+      } });
+      const result = await getListeningProfile(useDefault ? {} : { username: user }, client, config);
+      assert.equal(calls, 2);
+      assert.equal(result.username, user);
+      assert.equal(result.artists.items[0].playcount, 42);
+    }
+  }
 });

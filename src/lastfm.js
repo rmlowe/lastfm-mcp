@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-const username = z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9_-]+$/);
+// Legacy accounts can contain characters outside today's signup rules.
+// URLSearchParams encodes the username; Last.fm decides whether it exists.
+const username = z.string().trim().min(1).max(100);
 export const profileInput = z.object({
   username: username.optional().describe('Last.fm username; defaults to the configured owner.'),
   period: z.enum(['overall', '7day', '1month', '3month', '6month', '12month']).default('overall'),
