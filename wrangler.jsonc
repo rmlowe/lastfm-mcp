@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lastfm-mcp",
+  "workers_dev": true,
+  "preview_urls": false,
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "MCP_AUTH_MODE": "disabled",
+    "LASTFM_DEFAULT_USER": "rmlowe"
+  },
+  "secrets": { "required": ["LASTFM_API_KEY"] },
+  "observability": { "enabled": false }
+}
